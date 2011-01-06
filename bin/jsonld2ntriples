@@ -1,0 +1,3 @@
+#!/bin/sh
+
+erl -pa ./ebin -pa ./deps/mochiweb/ebin -noshell -s jsonld_2ntriples start -s init stop -- $*
