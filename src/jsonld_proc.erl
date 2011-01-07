@@ -50,7 +50,7 @@ triples({struct, Props}, InitialState) ->
                 _ ->
                     Property = case Key of
                         <<"a">> -> <<"http://www.w3.org/1999/02/22-rdf-syntax-ns#type">>;
-                        _ -> extract_property(Key, State#state.context)
+                        _ -> process_property(Key, State#state.context)
                     end,
                     case Value of
                         {struct, _V} ->
@@ -66,9 +66,16 @@ triples({struct, Props}, InitialState) ->
         ProcessingState,
         Props).
 
-is_resource(Subject, Property, Object, ContextDict) ->
-    % TODO need to implement
-    true.
+-define(BNODE_PATTERN, "^_\\:\\w+$").
+-define(CURIE_PATTERN, "^(\\w+)\\:(\\w+)$").
+-define(WRAPPED_ABSOLUTE_IRI_PATTERN, "^<((\\w+)\:(/?)(/?)([^>\\s]+))>$").
+-define(WRAPPED_RELATIVE_IRI_PATTERN, "^<([^\\:>\\s]+)>$").
+is_resource(_Subject, _Property, Object, ContextDict) ->
+    dict:is_key(Object, ContextDict)
+    or not(nomatch == re:run(Object, ?BNODE_PATTERN))
+    or not(nomatch == re:run(Object, ?CURIE_PATTERN))
+    or not(nomatch == re:run(Object, ?WRAPPED_ABSOLUTE_IRI_PATTERN))
+    or not(nomatch == re:run(Object, ?WRAPPED_RELATIVE_IRI_PATTERN)).
 
 triple(Subject, Property, Object, ContextDict) ->
     case is_resource(Subject, Property, Object, ContextDict) of
@@ -83,14 +90,19 @@ literal_valued_triple(Subject, Property, Object, ContextDict) ->
     #triple{type = literal, subject = Subject, property = Property, object = Object}.
 
 resource(Object, ContextDict) ->
+    WrappedAbsoluteIri = re:run(Object, ?WRAPPED_ABSOLUTE_IRI_PATTERN, [{capture, [all]}]),
+    WrappedRelativeIri = re:run(Object, ?WRAPPED_RELATIVE_IRI_PATTERN, [{capture, [all]}]),
+    Curie = re:run(Object, ?CURIE_PATTERN, [{capture, [all]}]),
+    BNode = re:run(Object, ?BNODE_PATTERN),
     case dict:is_key(Object, ContextDict) of
         true -> dict:fetch(Object, ContextDict);
-        false -> Object
+        false ->
+            Object
     end.
 
 -define(IRI_PATTERN, "^<?(?<iri>(?<prefix>\\w+)\\:(?<iri_starter>/?)(/?)(?<name>[^>\\s]+))>?$").
 
-extract_property(Key, ContextDict) ->
+process_property(Key, ContextDict) ->
     case re:run(Key, ?IRI_PATTERN, [{capture, ['iri', 'prefix', 'iri_starter', 'name'], binary}]) of
         {match, [_IRI, _Prefix, <<"/">>, _Name]} -> Key;
         {match, [_IRI, <<"_">>, _IRI_Starter, _Name]} -> Key;
