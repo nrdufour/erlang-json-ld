@@ -97,14 +97,51 @@ literal_valued_triple(Subject, Property, Object, ContextDict) ->
     #triple{type = literal, subject = Subject, property = Property, object = Object}.
 
 resource(Object, ContextDict) ->
-    WrappedAbsoluteIri = re:run(Object, ?WRAPPED_ABSOLUTE_IRI_PATTERN, [{capture, [all]}]),
-    WrappedRelativeIri = re:run(Object, ?WRAPPED_RELATIVE_IRI_PATTERN, [{capture, [all]}]),
-    Curie = re:run(Object, ?CURIE_PATTERN, [{capture, [all]}]),
+    WrappedAbsoluteIri = re:run(Object, ?WRAPPED_ABSOLUTE_IRI_PATTERN, [{capture, ['iri'], binary}]),
+    WrappedRelativeIri = re:run(Object, ?WRAPPED_RELATIVE_IRI_PATTERN, [{capture, ['iri'], binary}]),
+    Curie = re:run(Object, ?CURIE_PATTERN, [{capture, ['prefix', 'reference'], binary}]),
     BNode = re:run(Object, ?BNODE_PATTERN),
     case dict:is_key(Object, ContextDict) of
         true -> dict:fetch(Object, ContextDict);
         false ->
-            Object
+            case {BNode, Curie, WrappedAbsoluteIri, WrappedRelativeIri} of
+                %% BNode
+                {{match, _}, _, _, _} -> Object;
+                %% Curie
+                {_, {match, [Prefix, Reference]}, _, _} ->
+                    case dict:is_key(Prefix, ContextDict) of
+                        true -> 
+                            PrefixNamespace = dict:fetch(Prefix, ContextDict),
+                            <<PrefixNamespace/binary, Reference/binary>>;
+                        false ->
+                          case dict:is_key(Reference, ContextDict) of
+                              true ->
+                                  dict:fetch(Reference, ContextDict);
+                              false ->
+                                  throw(wrong_curie_resource)
+                          end
+                    end;
+                %% WrappedAbsoluteIri
+                {_, _, {match, [IRI]}, _} ->
+                    Base = case dict:is_key(<<"#base">>, ContextDict) of
+                        true -> dict:fetch(<<"#base">>, ContextDict);
+                        false -> <<"">>
+                    end,
+                    %% TODO need something for url parsing with #base rather than just concatenate it!
+                    <<Base/binary, IRI/binary>>;
+                %% WrappedRelativeIri
+                {_, _, _, {match, [IRI]}} ->
+                    case dict:is_key(<<"#base">>, ContextDict) of
+                        true ->
+                            Base = dict:fetch(<<"#base">>, ContextDict),
+                            %% TODO need something for url parsing with #base rather than just concatenate it!
+                            <<Base/binary, IRI/binary>>;
+                        false ->
+                            throw(wrong_relative_iri_resource)
+                    end;
+                %% Everything else
+                _ -> throw(wrong_resource)
+            end
     end.
 
 process_property(Key, ContextDict) ->
