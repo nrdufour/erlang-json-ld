@@ -74,7 +74,13 @@ triples({struct, Props}, InitialState) ->
             State#state{triples = NewTriples}
         end,
         ProcessingState,
-        Props).
+        Props);
+
+triples([H|T], InitialState) ->
+    [triples(H, InitialState) | triples(T, InitialState)];
+
+triples([], InitialState) ->
+    InitialState#state.triples.
 
 is_resource(_Subject, _Property, Object, ContextDict) ->
     dict:is_key(Object, ContextDict)
@@ -197,10 +203,21 @@ extract_processing_state(InitialState, Props) ->
         fun(Element, State) ->
             case Element of
                 {<<"#">>, {struct, LocalContext}} ->
-                    NewContext = merge_contexts(InitialState#state.context, LocalContext),
+                    NewContext = merge_contexts(State#state.context, LocalContext),
                     State#state{context = NewContext};
                 {<<"@">>, Subject} ->
-                    State#state{subject = Subject};
+                    case Subject of
+                        {struct, _} ->
+                            Triples = triples(Subject, State),
+                            %% TODO need to set the subject with the "@" in the Subject structure
+                            State#state{triples = [Triples|State#state.triples]};
+                        List when is_list(List) ->
+                            Triples = triples(List, State),
+                            %% TODO need to generate the subject with a uuid here
+                            State#state{triples = [Triples|State#state.triples]};
+                        _ ->
+                            State#state{subject = resource(Subject, State#state.context)}
+                    end;
                 _ -> State
             end
         end,
