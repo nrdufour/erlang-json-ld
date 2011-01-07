@@ -123,7 +123,7 @@ resource(Object, ContextDict) ->
                               true ->
                                   dict:fetch(Reference, ContextDict);
                               false ->
-                                  throw(wrong_curie_resource)
+                                  throw({wrong_curie_resource, Object})
                           end
                     end;
                 %% WrappedAbsoluteIri
@@ -142,10 +142,11 @@ resource(Object, ContextDict) ->
                             %% TODO need something for url parsing with #base rather than just concatenate it!
                             <<Base/binary, IRI/binary>>;
                         false ->
-                            throw(wrong_relative_iri_resource)
+                            throw({wrong_relative_iri_resource, Object})
                     end;
                 %% Everything else
-                _ -> throw(wrong_resource)
+                _ ->
+                    throw({wrong_resource, Object})
             end
     end.
 
@@ -168,7 +169,7 @@ process_property(Key, ContextDict) ->
                         true ->
                             Vocab = dict:fetch(<<"#vocab">>, ContextDict),
                             <<Vocab/binary, Key/binary>>;
-                        false -> throw(bad_property)
+                        false -> throw({bad_property, Key})
                     end
             end
     end.
