@@ -65,8 +65,7 @@ triples({struct, Props}, InitialState) ->
                     end,
                     case Value of
                         {struct, _V} ->
-                            % TODO
-                            ok;
+                            triples(Value, ProcessingState);
                         _ ->
                             [triple(State#state.subject, Property, Value, State#state.context)]
                     end
