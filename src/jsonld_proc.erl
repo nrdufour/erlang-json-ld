@@ -17,17 +17,22 @@
 %%
 
 -module(jsonld_proc).
--author("Nicolas R Dufour").
+-author("Nicolas R Dufour <nrdufour@gmail.com>").
 
 -compile(export_all).
 
 -include("jsonld.hrl").
 
+%% Patterns
 -define(IRI_PATTERN, "^<?(?<iri>(?<prefix>\\w+)\\:(?<iri_starter>/?)(/?)(?<name>[^>\\s]+))>?$").
 -define(BNODE_PATTERN, "^_\\:\\w+$").
--define(CURIE_PATTERN, "^(\\w+)\\:(\\w+)$").
--define(WRAPPED_ABSOLUTE_IRI_PATTERN, "^<((\\w+)\:(/?)(/?)([^>\\s]+))>$").
--define(WRAPPED_RELATIVE_IRI_PATTERN, "^<([^\\:>\\s]+)>$").
+-define(CURIE_PATTERN, "^(?<prefix>\\w+)\\:(?<reference>\\w+)$").
+-define(ABSOLUTE_PATTERN, "^(?<iri>(\\w+)\\:(/?)(/?)([^>\\s]+))$").
+-define(WRAPPED_ABSOLUTE_IRI_PATTERN, "^<(?<iri>(\\w+)\:(/?)(/?)([^>\\s]+))>$").
+-define(WRAPPED_RELATIVE_IRI_PATTERN, "^<(?<iri>[^\\:>\\s]+)>$").
+-define(LANG_PATTERN, "^(?<literal>.+)@(?<lang>[a-zA-Z][a-zA-Z0-9\\-]+)$").
+-define(TYPED_LITERAL_PATTERN, "^(?<literal>.+)\\^\\^(?<datatype>.+)$").
+-define(DATETIME_PATTERN, "^(?<year>\\d\\d\\d\\d)([-])?(?<month>\\d\\d)([-])?(?<day>\\d\\d)((T|\\s+)(?<hour>\\d\\d)(([:])?(?<minute>\\d\\d)(([:])?(?<second>\\d\\d)(([.])?(?<fraction>\\d+))?)?)?)?((?<tzzulu>Z)|(?<tzoffset>[-+])(?<tzhour>\\d\\d)([:])?(?<tzminute>\\d\\d))?$").
 
 -record(state, {
     context,
