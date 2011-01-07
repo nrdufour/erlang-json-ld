@@ -19,3 +19,5 @@
     property :: binary()
 }).
 
+-type triple() :: #triple{}.
+
