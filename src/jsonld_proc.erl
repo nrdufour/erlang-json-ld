@@ -23,6 +23,12 @@
 
 -include("jsonld.hrl").
 
+-define(IRI_PATTERN, "^<?(?<iri>(?<prefix>\\w+)\\:(?<iri_starter>/?)(/?)(?<name>[^>\\s]+))>?$").
+-define(BNODE_PATTERN, "^_\\:\\w+$").
+-define(CURIE_PATTERN, "^(\\w+)\\:(\\w+)$").
+-define(WRAPPED_ABSOLUTE_IRI_PATTERN, "^<((\\w+)\:(/?)(/?)([^>\\s]+))>$").
+-define(WRAPPED_RELATIVE_IRI_PATTERN, "^<([^\\:>\\s]+)>$").
+
 -record(state, {
     context,
     subject,
@@ -66,10 +72,6 @@ triples({struct, Props}, InitialState) ->
         ProcessingState,
         Props).
 
--define(BNODE_PATTERN, "^_\\:\\w+$").
--define(CURIE_PATTERN, "^(\\w+)\\:(\\w+)$").
--define(WRAPPED_ABSOLUTE_IRI_PATTERN, "^<((\\w+)\:(/?)(/?)([^>\\s]+))>$").
--define(WRAPPED_RELATIVE_IRI_PATTERN, "^<([^\\:>\\s]+)>$").
 is_resource(_Subject, _Property, Object, ContextDict) ->
     dict:is_key(Object, ContextDict)
     or not(nomatch == re:run(Object, ?BNODE_PATTERN))
@@ -99,8 +101,6 @@ resource(Object, ContextDict) ->
         false ->
             Object
     end.
-
--define(IRI_PATTERN, "^<?(?<iri>(?<prefix>\\w+)\\:(?<iri_starter>/?)(/?)(?<name>[^>\\s]+))>?$").
 
 process_property(Key, ContextDict) ->
     case re:run(Key, ?IRI_PATTERN, [{capture, ['iri', 'prefix', 'iri_starter', 'name'], binary}]) of
