@@ -256,32 +256,6 @@ build_default_context() ->
         InitialDict,
         Default).
 
-extract_processing_state(InitialState, Props) ->
-    lists:foldl(
-        fun(Element, State) ->
-            case Element of
-                {<<"#">>, {struct, LocalContext}} ->
-                    NewContext = merge_contexts(State#state.context, LocalContext),
-                    State#state{context = NewContext};
-                {<<"@">>, Subject} ->
-                    case Subject of
-                        {struct, _} ->
-                            Triples = triples(Subject, State),
-                            %% TODO need to set the subject with the "@" in the Subject structure
-                            State#state{triples = [Triples|State#state.triples]};
-                        List when is_list(List) ->
-                            Triples = triples(List, State),
-                            %% TODO need to generate the subject with a uuid here
-                            State#state{triples = [Triples|State#state.triples]};
-                        _ ->
-                            State#state{subject = resource(Subject, State#state.context)}
-                    end;
-                _ -> State
-            end
-        end,
-        InitialState,
-        Props).
-
 merge_contexts(InitialContext, LocalContext) ->
   lists:foldl(
       fun({Key, Value}, Dict) -> dict:store(Key, Value, Dict) end,
