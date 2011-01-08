@@ -69,38 +69,37 @@ process_subject({struct, _Props} = JsonObject, StateWithLocalContext) ->
     %% Subject
     LocalSubjectProp = get_json_prop(<<"@">>, JsonObject),
     case LocalSubjectProp of
-        {<<"@">>, SubjectValue} ->
-            case SubjectValue of
-                %% Subject is an object
-                {struct, _SubjectProps} ->
-                    TriplesFromObject = triples(SubjectValue, StateWithLocalContext),
-                    CurrentSubject = get_json_prop(<<"@">>, SubjectValue),
-                    StateWithLocalContext#state{
-                        subject = CurrentSubject,
-                        triples = lists:append(TriplesFromObject, StateWithLocalContext#state.triples)
-                    };
-                %% Subject is an array
-                List when is_list(List) ->
-                    TriplesFromList = triples(List, StateWithLocalContext),
-                    %% TODO need a uuid module
-                    Uuid = "1234",
-                    CurrentSubject = list_to_binary(io_lib:format("_:~p", [Uuid])),
-                    StateWithLocalContext#state{
-                        subject = CurrentSubject,
-                        triples = lists:append(TriplesFromList, StateWithLocalContext#state.triples)
-                    };
-                %% regular subject
-                _ ->
-                    CurrentSubject = resource(SubjectValue, StateWithLocalContext#state.context),
-                    StateWithLocalContext#state{ subject = CurrentSubject }
-            end;
-        %% there is no subject
+        {<<"@">>, SubjectValue} -> process_subject_value(SubjectValue, StateWithLocalContext);
         false ->
             %% TODO need a uuid module
             Uuid = "1234",
             CurrentSubject = list_to_binary(io_lib:format("_:~p", [Uuid])),
             StateWithLocalContext#state{ subject = CurrentSubject }
     end.
+
+process_subject_value({struct, _Props} = SubjectValue, StateWithLocalContext) ->
+    TriplesFromObject = triples(SubjectValue, StateWithLocalContext),
+    CurrentSubject = get_json_prop(<<"@">>, SubjectValue),
+    StateWithLocalContext#state{
+        subject = CurrentSubject,
+        triples = lists:append(TriplesFromObject, StateWithLocalContext#state.triples)
+    };
+
+process_subject_value(SubjectValue, StateWithLocalContext) when is_list(SubjectValue) ->
+    TriplesFromList = triples(SubjectValue, StateWithLocalContext),
+    %% TODO need a uuid module
+    Uuid = "1234",
+    CurrentSubject = list_to_binary(io_lib:format("_:~p", [Uuid])),
+    StateWithLocalContext#state{
+        subject = CurrentSubject,
+        triples = lists:append(TriplesFromList, StateWithLocalContext#state.triples)
+    };
+
+process_subject_value(SubjectValue, StateWithLocalContext) ->
+    CurrentSubject = resource(SubjectValue, StateWithLocalContext#state.context),
+    StateWithLocalContext#state{ subject = CurrentSubject }.
+
+%% ---
 
 process_other({struct, Props}, StateWithSubject) ->
     lists:foldl(
