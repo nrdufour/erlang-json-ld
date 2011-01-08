@@ -125,13 +125,13 @@ process_other({struct, Props}, StateWithSubject) ->
         StateWithSubject,
         Props).
 
-triples({struct, Props}, InitialState) ->
+triples({struct, _Props} = JsonObject, InitialState) ->
     %% Local Context: merge if exists
-    StateWithLocalContext = process_local_context({struct, Props}, InitialState),
+    StateWithLocalContext = process_local_context(JsonObject, InitialState),
     %% Subject
-    StateWithSubject = process_subject({struct, Props}, StateWithLocalContext),
+    StateWithSubject = process_subject(JsonObject, StateWithLocalContext),
     %% Everything else
-    process_other({struct, Props}, StateWithSubject);
+    process_other(JsonObject, StateWithSubject);
 
 triples([H|T], InitialState) ->
     [triples(H, InitialState) | triples(T, InitialState)];
