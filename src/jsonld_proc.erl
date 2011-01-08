@@ -96,7 +96,7 @@ process_subject_value(SubjectValue, StateWithLocalContext) when is_list(SubjectV
     };
 
 process_subject_value(SubjectValue, StateWithLocalContext) ->
-    CurrentSubject = resource(SubjectValue, StateWithLocalContext#state.context),
+    CurrentSubject = process_resource(SubjectValue, StateWithLocalContext#state.context),
     StateWithLocalContext#state{ subject = CurrentSubject }.
 
 %% ---
@@ -148,17 +148,17 @@ is_resource(_Subject, _Property, Object, ContextDict) ->
 
 triple(Subject, Property, Object, ContextDict) ->
     case is_resource(Subject, Property, Object, ContextDict) of
-        true  -> resource_valued_triple(Subject, Property, Object, ContextDict);
-        false -> literal_valued_triple(Subject, Property, Object, ContextDict)
+        true  -> process_resource_valued_triple(Subject, Property, Object, ContextDict);
+        false -> process_literal_valued_triple(Subject, Property, Object, ContextDict)
     end.
 
-resource_valued_triple(Subject, Property, Object, ContextDict) ->
-    #triple{type = resource, subject = Subject, property = Property, object = resource(Object, ContextDict)}.
+process_resource_valued_triple(Subject, Property, Object, ContextDict) ->
+    #triple{type = resource, subject = Subject, property = Property, object = process_resource(Object, ContextDict)}.
 
-literal_valued_triple(Subject, Property, Object, ContextDict) ->
+process_literal_valued_triple(Subject, Property, Object, ContextDict) ->
     #triple{type = literal, subject = Subject, property = Property, object = Object}.
 
-resource(Object, ContextDict) ->
+process_resource(Object, ContextDict) ->
     WrappedAbsoluteIri = re:run(Object, ?WRAPPED_ABSOLUTE_IRI_PATTERN, [{capture, ['iri'], binary}]),
     WrappedRelativeIri = re:run(Object, ?WRAPPED_RELATIVE_IRI_PATTERN, [{capture, ['iri'], binary}]),
     Curie = re:run(Object, ?CURIE_PATTERN, [{capture, ['prefix', 'reference'], binary}]),
