@@ -104,9 +104,9 @@ process_subject_value(SubjectValue, StateWithLocalContext) ->
 process_other({struct, Props}, StateWithSubject) ->
     lists:foldl(
         fun({Key, Value}, State) ->
-            ExtractedTriples = case Key of
-                <<"#">> -> [];
-                <<"@">> -> [];
+            case Key of
+                <<"#">> -> State;
+                <<"@">> -> State;
                 _ ->
                     Property = case Key of
                         <<"a">> -> <<"http://www.w3.org/1999/02/22-rdf-syntax-ns#type">>;
@@ -114,13 +114,12 @@ process_other({struct, Props}, StateWithSubject) ->
                     end,
                     case Value of
                         {struct, _V} ->
-                            triples(Value, StateWithSubject);
+                            triples(Value, State);
                         _ ->
-                            [triple(State#state.subject, Property, Value, State#state.context)]
+                            Triple = triple(State#state.subject, Property, Value, State#state.context),
+                            State#state{triples = lists:append(State#state.triples, [Triple])}
                     end
-            end,
-            NewTriples = lists:append(State#state.triples, ExtractedTriples),
-            State#state{triples = NewTriples}
+            end
         end,
         StateWithSubject,
         Props).
