@@ -115,6 +115,9 @@ process_other({struct, Props}, StateWithSubject) ->
                     case Value of
                         {struct, _V} ->
                             triples(Value, State);
+                        Array when is_list(Array) ->
+                            %% TODO Need to process array item here
+                            State;
                         _ ->
                             Triple = triple(State#state.subject, Property, Value, State#state.context),
                             State#state{triples = lists:append(State#state.triples, [Triple])}
