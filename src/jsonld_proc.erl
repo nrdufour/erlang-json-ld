@@ -72,7 +72,7 @@ process_subject({struct, _Props} = JsonObject, StateWithLocalContext) ->
         {<<"@">>, SubjectValue} -> process_subject_value(SubjectValue, StateWithLocalContext);
         false ->
             Uuid = uuid:to_string(uuid:v4()),
-            CurrentSubject = list_to_binary(io_lib:format("_:~p", [Uuid])),
+            CurrentSubject = list_to_binary(io_lib:format("_:~s", [Uuid])),
             StateWithLocalContext#state{ subject = CurrentSubject }
     end.
 
@@ -87,7 +87,7 @@ process_subject_value({struct, _Props} = SubjectValue, StateWithLocalContext) ->
 process_subject_value(SubjectValue, StateWithLocalContext) when is_list(SubjectValue) ->
     TriplesFromList = triples(SubjectValue, StateWithLocalContext),
     Uuid = uuid:to_string(uuid:v4()),
-    CurrentSubject = list_to_binary(io_lib:format("_:~p", [Uuid])),
+    CurrentSubject = list_to_binary(io_lib:format("_:~s", [Uuid])),
     StateWithLocalContext#state{
         subject = CurrentSubject,
         triples = lists:append(TriplesFromList, StateWithLocalContext#state.triples)
@@ -117,7 +117,7 @@ process_other({struct, Props}, StateWithSubject) ->
                                  {<<"@">>, SubjectValue} -> SubjectValue;
                                  false ->
                                      Uuid = uuid:to_string(uuid:v4()),
-                                     list_to_binary(io_lib:format("_:~p", [Uuid]))
+                                     list_to_binary(io_lib:format("_:~s", [Uuid]))
                             end,
                             LinkedTriple = triple(State#state.subject, Property, LinkedTripleObject, State#state.context),
                             NewState#state{triples = lists:append(NewState#state.triples, [LinkedTriple])};
@@ -145,7 +145,7 @@ triples([H|T], InitialState) ->
     [triples(H, InitialState) | triples(T, InitialState)];
 
 triples([], InitialState) ->
-    InitialState#state.triples.
+    InitialState.
 
 is_resource(_Subject, _Property, Object, ContextDict) ->
     dict:is_key(Object, ContextDict)
