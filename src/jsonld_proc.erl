@@ -111,8 +111,16 @@ process_other({struct, Props}, StateWithSubject) ->
                         _ -> process_property(Key, State#state.context)
                     end,
                     case Value of
-                        {struct, _V} ->
-                            triples(Value, State);
+                        {struct, _Object} ->
+                            NewState = triples(Value, State),
+                            LinkedTripleObject = case get_json_prop(<<"@">>, Value) of
+                                 {<<"@">>, SubjectValue} -> SubjectValue;
+                                 false ->
+                                     Uuid = uuid:to_string(uuid:v4()),
+                                     list_to_binary(io_lib:format("_:~p", [Uuid]))
+                            end,
+                            LinkedTriple = triple(State#state.subject, Property, LinkedTripleObject, State#state.context),
+                            NewState#state{triples = lists:append(NewState#state.triples, [LinkedTriple])};
                         Array when is_list(Array) ->
                             %% TODO Need to process array item here
                             State;
