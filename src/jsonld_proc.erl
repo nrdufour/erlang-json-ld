@@ -71,8 +71,7 @@ process_subject({struct, _Props} = JsonObject, StateWithLocalContext) ->
     case LocalSubjectProp of
         {<<"@">>, SubjectValue} -> process_subject_value(SubjectValue, StateWithLocalContext);
         false ->
-            %% TODO need a uuid module
-            Uuid = "1234",
+            Uuid = uuid:to_string(uuid:v4()),
             CurrentSubject = list_to_binary(io_lib:format("_:~p", [Uuid])),
             StateWithLocalContext#state{ subject = CurrentSubject }
     end.
@@ -87,8 +86,7 @@ process_subject_value({struct, _Props} = SubjectValue, StateWithLocalContext) ->
 
 process_subject_value(SubjectValue, StateWithLocalContext) when is_list(SubjectValue) ->
     TriplesFromList = triples(SubjectValue, StateWithLocalContext),
-    %% TODO need a uuid module
-    Uuid = "1234",
+    Uuid = uuid:to_string(uuid:v4()),
     CurrentSubject = list_to_binary(io_lib:format("_:~p", [Uuid])),
     StateWithLocalContext#state{
         subject = CurrentSubject,
