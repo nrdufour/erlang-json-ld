@@ -1,3 +1,7 @@
+
+% This file is part of erlang-json-ld released under the MIT license.
+% See the LICENSE file for more information.
+
 -module(jsonld_app).
 
 -behaviour(application).
@@ -14,7 +18,3 @@ start(_StartType, _StartArgs) ->
 
 stop(_State) ->
     ok.
-
-json_to_triples(Doc) ->
-    json_reader:json_to_triples(Doc).
-

@@ -26,8 +26,6 @@ json_to_triples(Doc) ->
     FinalState = triples(JsonItem, InitialState),
     FinalState#state.triples.
 
-
-
 %%
 %% Internal API
 %%
