@@ -9,9 +9,28 @@
 -module(jsonld_proc).
 -author("Nicolas R Dufour <nicolas.dufour@nemoworld.info>").
 
--compile(export_all).
+-export([json_to_triples/1]).
 
 -include("jsonld.hrl").
+
+-record(state, {
+    context,
+    subject,
+    triples = []
+}).
+
+json_to_triples(Doc) ->
+    DefaultContext = build_default_context(),
+    JsonItem = mochijson2:decode(Doc),
+    InitialState = #state{context = DefaultContext},
+    FinalState = triples(JsonItem, InitialState),
+    FinalState#state.triples.
+
+
+
+%%
+%% Internal API
+%%
 
 %% Patterns
 -define(IRI_PATTERN, "^<?(?<iri>(?<prefix>\\w+)\\:(?<iri_starter>/?)(/?)(?<name>[^>\\s]+))>?$").
@@ -24,22 +43,6 @@
 -define(TYPED_LITERAL_PATTERN, "^(?<literal>.+)\\^\\^(?<datatype>.+)$").
 -define(DATETIME_PATTERN, "^(?<year>\\d\\d\\d\\d)([-])?(?<month>\\d\\d)([-])?(?<day>\\d\\d)((T|\\s+)(?<hour>\\d\\d)(([:])?(?<minute>\\d\\d)(([:])?(?<second>\\d\\d)(([.])?(?<fraction>\\d+))?)?)?)?((?<tzzulu>Z)|(?<tzoffset>[-+])(?<tzhour>\\d\\d)([:])?(?<tzminute>\\d\\d))?$").
 
--record(state, {
-    context,
-    subject,
-    triples = []
-}).
-
-to_triples(Doc) ->
-    DefaultContext = build_default_context(),
-    JsonItem = mochijson2:decode(Doc),
-    InitialState = #state{context = DefaultContext},
-    FinalState = triples(JsonItem, InitialState),
-    FinalState#state.triples.
-
-%%
-%% Internal API
-%%
 
 %% TODO perhaps it should be a define instead
 get_json_prop(Key, {struct, Props}) ->
