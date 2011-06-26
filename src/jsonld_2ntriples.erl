@@ -19,7 +19,7 @@ start() ->
 
 parse_json_to_ntriples(JsonFile) ->
     Json = readlines(JsonFile),
-    Triples = jsonld_proc:json_to_triples(Json),
+    Triples = jsonld_reader:json_to_triples(Json),
     lists:foreach(
         fun(Element) ->
             NTriple = triple_to_ntriple(Element),

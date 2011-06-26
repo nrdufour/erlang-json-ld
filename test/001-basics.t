@@ -7,7 +7,7 @@ main([]) ->
     test_util:run(length(modules()), fun() -> test() end).
 
 modules() ->
-    [jsonld_proc, uuid, jsonld_2ntriples].
+    [jsonld_reader, uuid, jsonld_2ntriples].
 
 test() ->
     lists:foreach(fun(Mod) ->

@@ -6,7 +6,7 @@
 % JSON-LD Processor based on Bradley Allen work
 %
 
--module(jsonld_proc).
+-module(jsonld_reader).
 -author("Nicolas R Dufour <nicolas.dufour@nemoworld.info>").
 
 -export([json_to_triples/1]).
