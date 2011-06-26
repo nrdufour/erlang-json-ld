@@ -6,8 +6,11 @@ TEST_SUPPORT = \
 %.beam: %.erl
 	erlc -o test/ $<
 
-all:
+all: deps
 	./rebar compile
+
+deps:
+	./rebar get-deps
 
 check: all $(TEST_SUPPORT)
 	prove test/*.t
