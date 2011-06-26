@@ -1,12 +1,17 @@
 
-all: compile
+TEST_SUPPORT = \
+	test/etap.beam \
+	test/test_util.beam
 
-deps:
-	@./rebar get-deps
+%.beam: %.erl
+	erlc -o test/ $<
 
-compile: deps
-	@./rebar compile
+all:
+	./rebar compile
+
+check: all $(TEST_SUPPORT)
+	prove test/*.t
 
 clean:
-	@./rebar clean
-
+	./rebar clean
+	rm -f test/*.beam
