@@ -132,11 +132,17 @@ triples({struct, _Props} = JsonObject, InitialState) ->
     %% Everything else
     process_other(JsonObject, StateWithSubject);
 
-triples([H|T], InitialState) ->
-    [triples(H, InitialState) | triples(T, InitialState)];
-
-triples([], InitialState) ->
-    InitialState.
+triples(List, InitialState) when is_list(List) ->
+    AllTriples = lists:foldl(
+        fun(Element, Acc) ->
+            CurrentState = triples(Element, InitialState),
+            CurrentTriples = CurrentState#state.triples,
+            Acc ++ CurrentTriples
+        end,
+        InitialState#state.triples,
+        List
+    ),
+    InitialState#state{triples = AllTriples}.
 
 is_resource(_Subject, _Property, Object, ContextDict) ->
     dict:is_key(Object, ContextDict)
