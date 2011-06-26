@@ -1,5 +1,6 @@
 #! /usr/bin/env escript
 %%! -pa ./test/ -pa ./ebin/
+
 % This file is part of erlang-json-ld released under the MIT license.
 % See the LICENSE file for more information.
 
