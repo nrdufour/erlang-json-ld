@@ -7,7 +7,7 @@
 %
 
 -module(jsonld_proc).
--author("Nicolas R Dufour <nrdufour@gmail.com>").
+-author("Nicolas R Dufour <nicolas.dufour@nemoworld.info>").
 
 -compile(export_all).
 
@@ -153,7 +153,7 @@ triple(Subject, Property, Object, ContextDict) ->
 process_resource_valued_triple(Subject, Property, Object, ContextDict) ->
     #triple{type = resource, subject = Subject, property = Property, object = process_resource(Object, ContextDict)}.
 
-process_literal_valued_triple(Subject, Property, Object, ContextDict) ->
+process_literal_valued_triple(Subject, Property, Object, _ContextDict) ->
     #triple{type = literal, subject = Subject, property = Property, object = Object}.
 
 process_resource(Object, ContextDict) ->

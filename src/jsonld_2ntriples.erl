@@ -3,7 +3,7 @@
 % See the LICENSE file for more information.
 
 -module(jsonld_2ntriples).
--author("Nicolas R Dufour <nrdufour@gmail.com>").
+-author("Nicolas R Dufour <nicolas.dufour@nemoworld.info>").
 
 -export([start/0]).
 
