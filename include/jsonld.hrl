@@ -12,6 +12,19 @@
 %% License for the specific language governing permissions and limitations under
 %% the License.
 
+% Keywords
+-define(LOCAL_CONTEXT_KEY, <<"@context">>).
+-define(IRI_BASE_KEY, <<"@base">>).
+-define(REMOTE_CONTEXT_KEY, <<"@profile">>).
+-define(VOCAB_KEY, <<"@vocab">>).
+-define(COERCE_KEY, <<"@coerce">>).
+-define(LITERAL_KEY, <<"@literal">>).
+-define(IRI_KEY, <<"@iri">>).
+-define(LANGUAGE_KEY, <<"@language">>).
+-define(DATATYPE_KEY, <<"@datatype">>).
+-define(SUBJECT_KEY, <<"@">>).
+-define(TYPE_KEY, <<"a">>).
+
 -record(triple, {
     type     :: resource | literal,
     subject  :: binary(),
@@ -20,4 +33,3 @@
 }).
 
 -type triple() :: #triple{}.
-
