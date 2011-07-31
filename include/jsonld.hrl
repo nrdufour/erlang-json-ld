@@ -14,7 +14,7 @@
 
 % Keywords
 -define(LOCAL_CONTEXT_KEY, <<"@context">>).
--define(IRI_BASE_KEY, <<"@base">>).
+-define(BASE_KEY, <<"@base">>).
 -define(REMOTE_CONTEXT_KEY, <<"@profile">>).
 -define(VOCAB_KEY, <<"@vocab">>).
 -define(COERCE_KEY, <<"@coerce">>).

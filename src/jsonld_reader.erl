@@ -16,32 +16,60 @@
 }).
 
 json_to_triples(Doc) ->
-    DefaultContext = build_default_context(),
-
-    io:format("about to decode json ~p~n", [Doc]),
-
+    % decode the binary json into eep0018
     JsonItem = jsx:json_to_term(Doc),
 
-    io:format("Terms: ~p~n", [JsonItem]),
-
+    % create the jsonld processor initial state
+    DefaultContext = jsonld_context:create_default(),
     InitialState = #state{context = DefaultContext},
+
+    % extract the triples
     FinalState = triples(JsonItem, InitialState),
+
+    % return them
     FinalState#state.triples.
 
-%
+% ----------------------------------------------------------------------------
 % Internal API
-%
+% ----------------------------------------------------------------------------
 
 % Patterns
 -define(IRI_PATTERN, "^<?(?<iri>(?<prefix>\\w+)\\:(?<iri_starter>/?)(/?)(?<name>[^>\\s]+))>?$").
 -define(BNODE_PATTERN, "^_\\:\\w+$").
 -define(CURIE_PATTERN, "^(?<prefix>\\w+)\\:(?<reference>\\w+)$").
 -define(ABSOLUTE_PATTERN, "^(?<iri>(\\w+)\\:(/?)(/?)([^>\\s]+))$").
--define(WRAPPED_ABSOLUTE_IRI_PATTERN, "^<(?<iri>(\\w+)\:(/?)(/?)([^>\\s]+))>$").
--define(WRAPPED_RELATIVE_IRI_PATTERN, "^<(?<iri>[^\\:>\\s]+)>$").
+-define(ABSOLUTE_IRI_PATTERN, "^(?<iri>(\\w+)\:(/?)(/?)([^>\\s]+))$").
+-define(RELATIVE_IRI_PATTERN, "^(?<iri>[^\\:>\\s]+)$").
 -define(LANG_PATTERN, "^(?<literal>.+)@(?<lang>[a-zA-Z][a-zA-Z0-9\\-]+)$").
 -define(TYPED_LITERAL_PATTERN, "^(?<literal>.+)\\^\\^(?<datatype>.+)$").
 -define(DATETIME_PATTERN, "^(?<year>\\d\\d\\d\\d)([-])?(?<month>\\d\\d)([-])?(?<day>\\d\\d)((T|\\s+)(?<hour>\\d\\d)(([:])?(?<minute>\\d\\d)(([:])?(?<second>\\d\\d)(([.])?(?<fraction>\\d+))?)?)?)?((?<tzzulu>Z)|(?<tzoffset>[-+])(?<tzhour>\\d\\d)([:])?(?<tzminute>\\d\\d))?$").
+
+% default processing function: using an object or an array
+triples(Item, InitialState) ->
+    case ?IS_OBJECT(Item) of
+        % it's an object
+        true ->
+            % Local Context: merge if exists
+            StateWithLocalContext = process_local_context(Item, InitialState),
+            % Subject
+            StateWithSubject = process_subject(Item, StateWithLocalContext),
+            % Everything else
+            process_other(Item, StateWithSubject);
+        % it's an array
+        false ->
+            % process each element according to their type
+            % and merge the result
+            AllTriples = lists:foldl(
+                fun(Element, Acc) ->
+                    CurrentState = triples(Element, InitialState),
+                    CurrentTriples = CurrentState#state.triples,
+                    Acc ++ CurrentTriples
+                end,
+                InitialState#state.triples,
+                Item
+            ),
+            InitialState#state{triples = AllTriples}
+    end.
 
 process_local_context(JsonObject, InitialState) ->
     % Local Context: merge if exists
@@ -49,9 +77,11 @@ process_local_context(JsonObject, InitialState) ->
     case LocalContextProp of
         false -> InitialState;
         {_, Value} ->
-            NewContext = merge_contexts(InitialState#state.context, Value),
+            NewContext = jsonld_context:merge(InitialState#state.context, Value),
             InitialState#state{context = NewContext}
     end.
+
+% -- Subject --
 
 process_subject(JsonObject, StateWithLocalContext) ->
     % Subject
@@ -131,129 +161,96 @@ process_other(JsonObject, StateWithSubject) ->
         StateWithSubject,
         JsonObject).
 
-triples(Item, InitialState) ->
-    case ?IS_OBJECT(Item) of
-        % it's an object
-        true ->
-            io:format("It's an object!~n", []),
-            % Local Context: merge if exists
-            StateWithLocalContext = process_local_context(Item, InitialState),
-            % Subject
-            StateWithSubject = process_subject(Item, StateWithLocalContext),
-            % Everything else
-            process_other(Item, StateWithSubject);
-        % it's an array
-        false ->
-            io:format("It's an array!~n", []),
-            AllTriples = lists:foldl(
-                fun(Element, Acc) ->
-                    CurrentState = triples(Element, InitialState),
-                    CurrentTriples = CurrentState#state.triples,
-                    Acc ++ CurrentTriples
-                end,
-                InitialState#state.triples,
-                Item
-            ),
-            InitialState#state{triples = AllTriples}
-    end.
+% ---
 
-is_resource(_Subject, _Property, Object, ContextDict) ->
-    dict:is_key(Object, ContextDict)
+is_resource(_Subject, _Property, Object, Context) ->
+    jsonld_context:has_namespace(Context, Object)
     or not(nomatch == re:run(Object, ?BNODE_PATTERN))
     or not(nomatch == re:run(Object, ?CURIE_PATTERN))
-    or not(nomatch == re:run(Object, ?WRAPPED_ABSOLUTE_IRI_PATTERN))
-    or not(nomatch == re:run(Object, ?WRAPPED_RELATIVE_IRI_PATTERN)).
+    or not(nomatch == re:run(Object, ?ABSOLUTE_IRI_PATTERN))
+    or not(nomatch == re:run(Object, ?RELATIVE_IRI_PATTERN)).
 
-triple(Subject, Property, Object, ContextDict) ->
-    case is_resource(Subject, Property, Object, ContextDict) of
-        true  -> process_resource_valued_triple(Subject, Property, Object, ContextDict);
-        false -> process_literal_valued_triple(Subject, Property, Object, ContextDict)
+triple(Subject, Property, Object, Context) ->
+    case is_resource(Subject, Property, Object, Context) of
+        true  -> process_resource_valued_triple(Subject, Property, Object, Context);
+        false -> process_literal_valued_triple(Subject, Property, Object, Context)
     end.
 
-process_resource_valued_triple(Subject, Property, Object, ContextDict) ->
-    #triple{type = resource, subject = Subject, property = Property, object = process_resource(Object, ContextDict)}.
+process_resource_valued_triple(Subject, Property, Object, Context) ->
+    #triple{type = resource, subject = Subject, property = Property, object = process_resource(Object, Context)}.
 
-process_literal_valued_triple(Subject, Property, Object, _ContextDict) ->
+process_literal_valued_triple(Subject, Property, Object, _Context) ->
     #triple{type = literal, subject = Subject, property = Property, object = Object}.
 
-process_resource(Object, ContextDict) ->
-    WrappedAbsoluteIri = re:run(Object, ?WRAPPED_ABSOLUTE_IRI_PATTERN, [{capture, ['iri'], binary}]),
-    WrappedRelativeIri = re:run(Object, ?WRAPPED_RELATIVE_IRI_PATTERN, [{capture, ['iri'], binary}]),
+process_resource(Object, Context) ->
+    AbsoluteIri = re:run(Object, ?ABSOLUTE_IRI_PATTERN, [{capture, ['iri'], binary}]),
+    RelativeIri = re:run(Object, ?RELATIVE_IRI_PATTERN, [{capture, ['iri'], binary}]),
     Curie = re:run(Object, ?CURIE_PATTERN, [{capture, ['prefix', 'reference'], binary}]),
     BNode = re:run(Object, ?BNODE_PATTERN),
-    case dict:is_key(Object, ContextDict) of
-        true -> dict:fetch(Object, ContextDict);
+    case jsonld_context:has_namespace(Context, Object) of
+        true -> jsonld_context:get_namespace(Context, Object);
         false ->
-            case {BNode, Curie, WrappedAbsoluteIri, WrappedRelativeIri} of
-                %% BNode
+            case {BNode, Curie, AbsoluteIri, RelativeIri} of
+                % BNode
                 {{match, _}, _, _, _} -> Object;
-                %% Curie
+                % Curie
                 {_, {match, [Prefix, Reference]}, _, _} ->
-                    case dict:is_key(Prefix, ContextDict) of
+                    case jsonld_context:has_namespace(Context, Prefix) of
                         true ->
-                            PrefixNamespace = dict:fetch(Prefix, ContextDict),
+                            PrefixNamespace = jsonld_context:get_namespace(Context, Prefix),
                             <<PrefixNamespace/binary, Reference/binary>>;
                         false ->
-                          case dict:is_key(Reference, ContextDict) of
+                          case jsonld_context:has_namespace(Context, Reference) of
                               true ->
-                                  dict:fetch(Reference, ContextDict);
+                                  jsonld_context:get_namespace(Context, Reference);
                               false ->
                                   throw({wrong_curie_resource, Object})
                           end
                     end;
-                %% WrappedAbsoluteIri
+                % AbsoluteIri
                 {_, _, {match, [IRI]}, _} ->
-                    Base = case dict:is_key(<<"#base">>, ContextDict) of
-                        true -> dict:fetch(<<"#base">>, ContextDict);
-                        false -> <<"">>
+                    PossibleBase = jsonld_context:get_base(Context),
+                    Base = case PossibleBase of
+                        undefined -> <<"">>;
+                        _         -> PossibleBase
                     end,
-                    %% TODO need something for url parsing with #base rather than just concatenate it!
+                    % TODO need something for url parsing with #base rather than just concatenate it!
                     <<Base/binary, IRI/binary>>;
-                %% WrappedRelativeIri
+                % RelativeIri
                 {_, _, _, {match, [IRI]}} ->
-                    case dict:is_key(<<"#base">>, ContextDict) of
-                        true ->
-                            Base = dict:fetch(<<"#base">>, ContextDict),
-                            %% TODO need something for url parsing with #base rather than just concatenate it!
-                            <<Base/binary, IRI/binary>>;
-                        false ->
-                            throw({wrong_relative_iri_resource, Object})
+                    PossibleBase = jsonld_context:get_base(Context),
+                    case PossibleBase of
+                        undefined ->
+                            throw({wrong_relative_iri_resource, Object});
+                        _ ->
+                            % TODO need something for url parsing with #base rather than just concatenate it!
+                            <<PossibleBase/binary, IRI/binary>>
                     end;
-                %% Everything else
+                % Everything else
                 _ ->
                     throw({wrong_resource, Object})
             end
     end.
 
-process_property(Key, ContextDict) ->
+process_property(Key, Context) ->
     case re:run(Key, ?IRI_PATTERN, [{capture, ['iri', 'prefix', 'iri_starter', 'name'], binary}]) of
         {match, [_IRI, _Prefix, <<"/">>, _Name]} -> Key;
         {match, [_IRI, <<"_">>, _IRI_Starter, _Name]} -> Key;
         {match, [IRI, Prefix, _IRI_Starter, Name]} ->
-            case dict:is_key(Prefix, ContextDict) of
+            case jsonld_context:has_namespace(Context, Prefix) of
                 true ->
-                    URI = dict:fetch(Prefix, ContextDict),
+                    URI = jsonld_context:get_namespace(Context, Prefix),
                     <<URI/binary, Name/binary>>;
                 false -> IRI
             end;
         _ ->
-            case dict:is_key(Key, ContextDict) of
-                true -> dict:fetch(Key, ContextDict);
+            case jsonld_context:has_namespace(Context, Key) of
+                true -> jsonld_context:get_namespace(Context, Key);
                 false ->
-                    case dict:is_key(<<"#vocab">>, ContextDict) of
-                        true ->
-                            Vocab = dict:fetch(<<"#vocab">>, ContextDict),
-                            <<Vocab/binary, Key/binary>>;
-                        false -> throw({bad_property, Key})
+                    Vocab = jsonld_context:get_vocab(Context),
+                    case Vocab of
+                        undefined -> throw({bad_property, Key});
+                        _ -> <<Vocab/binary, Key/binary>>
                     end
             end
     end.
-
-build_default_context() ->
-    InitialDict = dict:new(),
-    Fun = fun({Key, Value}, Dict) -> dict:store(Key, Value, Dict) end,
-    lists:foldl(Fun, InitialDict, ?DEFAULT_CONTEXT).
-
-merge_contexts(InitialContext, LocalContext) ->
-    Fun = fun({Key, Value}, Dict) -> dict:store(Key, Value, Dict) end,
-    lists:foldl(Fun, InitialContext, LocalContext).
