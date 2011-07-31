@@ -1,5 +1,5 @@
 #! /usr/bin/env escript
-%%! -pa ./ebin/
+%%! -pa ./ebin/ -pa ./deps/jsx/ebin
 
 % This file is part of erlang-json-ld released under the MIT license.
 % See the LICENSE file for more information.
@@ -11,7 +11,7 @@ main(Args) ->
     end.
 
 parse_json_to_ntriples(JsonFile) ->
-    Json = readlines(JsonFile),
+    {ok, Json} = file:read_file(JsonFile),
     NTriples = jsonld:json_to_ntriples(Json),
     lists:foreach(
         fun(NTriple) ->
@@ -20,13 +20,3 @@ parse_json_to_ntriples(JsonFile) ->
         NTriples
     ),
     ok.
-
-readlines(FileName) ->
-    {ok, Device} = file:open(FileName, [read]),
-    get_all_lines(Device, []).
-
-get_all_lines(Device, Accum) ->
-    case io:get_line(Device, "") of
-        eof  -> file:close(Device), Accum;
-        Line -> get_all_lines(Device, Accum ++ [Line])
-    end.

@@ -1,6 +1,7 @@
-{
-  "#": {"foaf": "http://xmlns.com/foaf/0.1/"},
-  "@": "<http://example.org/people#john>",
-  "a": "foaf:Person",
-  "foaf:name" : "John Lennon"
+{ 
+  "@context": "http://purl.org/jsonld/Person"
+  "@subject": "http://dbpedia.org/resource/John_Lennon",
+  "name": "John Lennon",
+  "birthday": "10-09",
+  "member": "http://dbpedia.org/resource/The_Beatles"
 }
