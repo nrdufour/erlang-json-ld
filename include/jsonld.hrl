@@ -23,7 +23,7 @@
 -define(LANGUAGE_KEY, <<"@language">>).
 -define(DATATYPE_KEY, <<"@datatype">>).
 -define(SUBJECT_KEY, <<"@subject">>).
--define(TYPE_KEY, <<"a">>).
+-define(TYPE_KEY, <<"@type">>).
 
 -define(DEFAULT_CONTEXT,
 [
